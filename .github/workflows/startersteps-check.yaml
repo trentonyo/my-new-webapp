@@ -1,0 +1,13 @@
+name: Startersteps.md Check
+on: [push]
+jobs:
+  check-for-Startersteps-file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if Startersteps.md exists
+        run: |
+          if [[ -f "Startersteps.md" ]]; then
+            echo "Make sure to complete all the steps in Startersteps.md, then delete that file and this workflow!"
+            exit 1
+          fi

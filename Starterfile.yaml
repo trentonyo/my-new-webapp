@@ -1,0 +1,99 @@
+env_file:
+  - public.env
+
+tools:
+  nodejs:
+    scripts:
+      check: |
+        node --version
+        npm --version
+      windows:
+        install: scoop install nodejs
+        uninstall: scoop uninstall nodejs
+      mac:
+        install: brew install node
+        uninstall: brew uninstall node
+      linux:
+        install: sudo apt install npm
+        uninstall: sudo apt remove npm
+  pnpm:
+    depends_on: nodejs
+    scripts:
+      install: npm install -g pnpm
+      uninstall: npm uninstall -g pnpm
+      check: pnpm --version
+  create-react-app:
+    depends_on: nodejs
+    scripts:
+      install: npm install -g create-react-app
+      uninstall: npm uninstall -g create-react-app
+      check: create-react-app --version
+  git-hooks:
+    depends_on: nodejs
+    # Only works with git>=2.9.0
+    scripts:
+      windows:
+        check: |
+          npm install semver
+          ./scripts/check-git.bat
+          $EXIT_CODE = $LASTEXITCODE
+          npm uninstall semver
+          exit $EXIT_CODE
+      check: |
+        npm install semver
+        bash ./scripts/check-git.bash
+        export EXIT_CODE=$?
+        npm uninstall semver
+        exit $EXIT_CODE
+      install: git config --local core.hooksPath .githooks/
+      uninstall: git config --local --unset core.hooksPath
+
+modules:
+  postgresql:
+    dest: ${POSTGRES_DEST}
+    source:
+      git: git@github.com:Start-Out/module-postgresql.git
+    scripts:
+      init: |
+        cd ./${POSTGRES_DEST}
+#        git-bash ./setup_postgresql.sh 
+      destroy: rm -rf ./${POSTGRES_DEST}
+      windows:
+        destroy: rm ./${POSTGRES_DEST} -r -fo
+  express:
+    depends_on:
+      - postgresql
+    dest: ${EXPRESS_DEST}
+    source:
+      git: git@github.com:Start-Out/module-express.git
+    scripts:
+      init: |
+        cd ./${EXPRESS_DEST}
+        npm install
+      destroy: rm -rf ./${EXPRESS_DEST}
+      windows:
+        destroy: rm ./${EXPRESS_DEST} -r -fo
+  react:
+    dest: tmp
+    init_options:
+      - env_name: MODULE_REACT_USE_TYPESCRIPT
+        default: true
+        prompt: Would you like to use TypeScript instead of JavaScript?
+      - env_name: MODULE_REACT_APP_NAME
+        default: startout-react-app
+        prompt: What should the React app to be called?
+    source:
+      git: git@github.com:Start-Out/module-react.git
+    scripts:
+      init: |
+          bash ./tmp/setup_react.sh
+          rm -rf ./tmp 
+      start: |
+        cd ./${MODULE_REACT_APP_NAME}
+        pnpm start
+      destroy: rm -rf ./${MODULE_REACT_APP_NAME}
+      windows:
+        init: |
+          git-bash ./tmp/setup_react.sh
+          echo "The directory tmp is safe to remove!"
+        destroy: rm ./${MODULE_REACT_APP_NAME} -r -fo
